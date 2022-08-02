@@ -105,13 +105,11 @@ class UniqueCollection:
         already in the member list, is returned."""
 
         r = repr(object)
-        # Is 'object' a duplicate of some other member?
         if r in self.member_reprs:
             return self.member_reprs[r]
-        else:
-            self.member_reprs[r] = object
-            self.members.append(object)
-            return object
+        self.member_reprs[r] = object
+        self.members.append(object)
+        return object
 
     def Members(self):
         "Returns the list of members."
@@ -119,10 +117,7 @@ class UniqueCollection:
 
     def HasMember(self, object):
         "Does the list of members contain the object?"
-        if repr(object) in self.members_reprs:
-            return 1
-        else:
-            return 0
+        return 1 if repr(object) in self.members_reprs else 0
 
 # This list needs to be defined before the NCP types are defined,
 # because the NCP types are defined in the global scope, not inside
@@ -141,10 +136,7 @@ class NamedList:
     def __cmp__(self, other):
         "Compare this NamedList to another"
 
-        if isinstance(other, NamedList):
-            return cmp(self.list, other.list)
-        else:
-            return 0
+        return cmp(self.list, other.list) if isinstance(other, NamedList) else 0
 
 
     def Name(self, new_name = None):
@@ -159,16 +151,13 @@ class NamedList:
 
     def Null(self):
         "Is there no list (different from an empty list)?"
-        return self.list == None
+        return self.list is None
 
     def Empty(self):
         "It the list empty (different from a null list)?"
         assert(not self.Null())
 
-        if self.list:
-            return 0
-        else:
-            return 1
+        return 0 if self.list else 1
 
     def __repr__(self):
         return repr(self.list)
@@ -199,8 +188,7 @@ class PTVC(NamedList):
             if var_name:
                 # Did we already define this var?
                 if var_name in named_vars:
-                    sys.exit("%s has multiple %s vars." % \
-                            (name, var_name))
+                    sys.exit(f"{name} has multiple {var_name} vars.")
 
                 highest_var = highest_var + 1
                 var = highest_var
@@ -210,13 +198,10 @@ class PTVC(NamedList):
             else:
                 var = NO_VAR
 
-            # Repeat
-            repeat_name = record[REC_REPEAT]
-            if repeat_name:
+            if repeat_name := record[REC_REPEAT]:
                 # Do we have this var?
                 if repeat_name not in named_vars:
-                    sys.exit("%s does not have %s var defined." % \
-                            (name, var_name))
+                    sys.exit(f"{name} does not have {var_name} var defined.")
                 repeat = named_vars[repeat_name]
             else:
                 repeat = NO_REPEAT
@@ -228,15 +213,15 @@ class PTVC(NamedList):
 
             ptvc_rec = PTVCRecord(field, length, endianness, var, repeat, req_cond)
 
-            if expected_offset == None:
+            if expected_offset is None:
                 expected_offset = offset
 
             elif expected_offset == -1:
                 pass
 
-            elif expected_offset != offset and offset != -1:
+            elif expected_offset != offset != -1:
                 msg.write("Expected offset in %s for %s to be %d\n" % \
-                        (name, field.HFName(), expected_offset))
+                            (name, field.HFName(), expected_offset))
                 sys.exit(1)
 
             # We can't make a PTVC list from a variable-length
@@ -248,17 +233,13 @@ class PTVC(NamedList):
             if type(ptvc_rec.Length()) == type(()):
                 if isinstance(ptvc_rec.Field(), nstring):
                     expected_offset = -1
-                    pass
                 elif isinstance(ptvc_rec.Field(), nbytes):
                     expected_offset = -1
-                    pass
                 elif isinstance(ptvc_rec.Field(), struct):
                     expected_offset = -1
-                    pass
                 else:
                     field = ptvc_rec.Field()
-                    assert 0, "Cannot make PTVC from %s, type %s" % \
-                            (field.HFName(), field)
+                    assert 0, f"Cannot make PTVC from {field.HFName()}, type {field}"
 
             elif expected_offset > -1:
                 if ptvc_rec.Length() < 0:
@@ -270,7 +251,7 @@ class PTVC(NamedList):
             self.list.append(ptvc_rec)
 
     def ETTName(self):
-        return "ett_%s" % (self.Name(),)
+        return f"ett_{self.Name()}"
 
 
     def Code(self):
@@ -340,16 +321,8 @@ class PTVCRecord:
 
     def Code(self):
         # Nice textual representations
-        if self.var == NO_VAR:
-            var = "NO_VAR"
-        else:
-            var = self.var
-
-        if self.repeat == NO_REPEAT:
-            repeat = "NO_REPEAT"
-        else:
-            repeat = self.repeat
-
+        var = "NO_VAR" if self.var == NO_VAR else self.var
+        repeat = "NO_REPEAT" if self.repeat == NO_REPEAT else self.repeat
         if self.req_cond == NO_REQ_COND:
             req_cond = "NO_REQ_COND"
         else:
@@ -363,10 +336,7 @@ class PTVCRecord:
 
     def RegularCode(self, var, repeat, req_cond):
         "String representation"
-        endianness = 'BE'
-        if self.endianness == LE:
-            endianness = 'LE'
-
+        endianness = 'LE' if self.endianness == LE else 'BE'
         length = None
 
         if type(self.length) == type(0):
@@ -380,19 +350,15 @@ class PTVCRecord:
             if var_length > 0:
                 length = var_length
 
-        if length == PROTO_LENGTH_UNKNOWN:
-            # XXX length = "PROTO_LENGTH_UNKNOWN"
-            pass
-
-        assert length, "Length not handled for %s" % (self.field.HFName(),)
+        assert length, f"Length not handled for {self.field.HFName()}"
 
         sub_ptvc_name = self.field.PTVCName()
         if sub_ptvc_name != "NULL":
-            sub_ptvc_name = "&%s" % (sub_ptvc_name,)
+            sub_ptvc_name = f"&{sub_ptvc_name}"
 
 
         return "{ &%s, %s, %s, %s, %s, %s, %s, %s }" % \
-                (self.field.HFName(), length, sub_ptvc_name,
+                    (self.field.HFName(), length, sub_ptvc_name,
                 endianness, var, repeat, req_cond,
                 self.field.SpecialFmt())
 
@@ -428,15 +394,10 @@ class NCP:
 
         if group not in groups:
             msg.write("NCP 0x%x has invalid group '%s'\n" % \
-                    (self.__code__, group))
+                        (self.__code__, group))
             sys.exit(1)
 
-        if self.HasSubFunction():
-            # NCP Function with SubFunction
-            self.start_offset = 10
-        else:
-            # Simple NCP Function
-            self.start_offset = 7
+        self.start_offset = 10 if self.HasSubFunction() else 7
 
     def ReqCondSize(self):
         return self.req_cond_size
@@ -449,28 +410,24 @@ class NCP:
 
     def FunctionCode(self, part=None):
         "Returns the function code for this NCP packet."
-        if part == None:
+        if part is None:
             return self.__code__
         elif part == 'high':
-            if self.HasSubFunction():
-                return (self.__code__ & 0xff00) >> 8
-            else:
-                return self.__code__
+            return (
+                (self.__code__ & 0xFF00) >> 8
+                if self.HasSubFunction()
+                else self.__code__
+            )
+
         elif part == 'low':
-            if self.HasSubFunction():
-                return self.__code__ & 0x00ff
-            else:
-                return 0x00
+            return self.__code__ & 0x00ff if self.HasSubFunction() else 0x00
         else:
             msg.write("Unknown directive '%s' for function_code()\n" % (part))
             sys.exit(1)
 
     def HasSubFunction(self):
         "Does this NPC packet require a subfunction field?"
-        if self.__code__ <= 0xff:
-            return 0
-        else:
-            return 1
+        return 0 if self.__code__ <= 0xff else 1
 
     def HasLength(self):
         return self.has_length
@@ -551,7 +508,7 @@ class NCP:
         it to the global list of PTVCs (the global list is a UniqueCollection,
         so an equivalent PTVC may already be in the global list)."""
 
-        name = "%s_%s" % (self.CName(), name_suffix)
+        name = f"{self.CName()}_{name_suffix}"
         ptvc = PTVC(name, records)
         return ptvc_lists.Add(ptvc)
 
@@ -599,13 +556,12 @@ class NCP:
                 if text != NO_REQ_COND:
                     texts[text] = None
 
-        if len(texts) == 0:
+        if not texts:
             self.req_conds = None
             return None
 
-        dfilter_texts = list(texts.keys())
-        dfilter_texts.sort()
-        name = "%s_req_cond_indexes" % (self.CName(),)
+        dfilter_texts = sorted(texts.keys())
+        name = f"{self.CName()}_req_cond_indexes"
         return NamedList(name, dfilter_texts)
 
     def GetReqConds(self):
@@ -622,7 +578,7 @@ class NCP:
         realizes that because Python lists are the input and
         output."""
 
-        if codes == None:
+        if codes is None:
             return self.codes
 
         # Sanity check
@@ -640,7 +596,7 @@ class NCP:
 
         # Create CompletionCode (NamedList) object and possible
         # add it to  the global list of completion code lists.
-        name = "%s_errors" % (self.CName(),)
+        name = f"{self.CName()}_errors"
         codes.sort()
         codes_list = NamedList(name, codes)
         self.codes = compcode_lists.Add(codes_list)
@@ -666,31 +622,22 @@ def srec(field, endianness=None, **kw):
 def _rec(start, length, field, endianness, kw):
     # If endianness not explicitly given, use the field's
     # default endiannes.
-    if endianness == None:
+    if endianness is None:
         endianness = field.Endianness()
 
     # Setting a var?
     if "var" in kw:
         # Is the field an INT ?
         if not isinstance(field, CountingNumber):
-            sys.exit("Field %s used as count variable, but not integer." \
-                    % (field.HFName()))
+            sys.exit(f"Field {field.HFName()} used as count variable, but not integer.")
         var = kw["var"]
     else:
         var = None
 
     # If 'var' not used, 'repeat' can be used.
-    if not var and "repeat" in kw:
-        repeat = kw["repeat"]
-    else:
-        repeat = None
-
+    repeat = kw["repeat"] if not var and "repeat" in kw else None
     # Request-condition ?
-    if "req_cond" in kw:
-        req_cond = kw["req_cond"]
-    else:
-        req_cond = NO_REQ_COND
-
+    req_cond = kw["req_cond"] if "req_cond" in kw else NO_REQ_COND
     return [start, length, field, endianness, var, repeat, req_cond]
 
 
@@ -715,7 +662,7 @@ class Type:
         self.descr = descr
         self.bytes = bytes
         self.endianness = endianness
-        self.hfname = "hf_ncp_" + self.abbrev
+        self.hfname = f"hf_ncp_{self.abbrev}"
         self.special_fmt = "NCP_FMT_NONE"
 
     def Length(self):
@@ -731,7 +678,7 @@ class Type:
         return self.hfname
 
     def DFilter(self):
-        return "ncp." + self.abbrev
+        return f"ncp.{self.abbrev}"
 
     def WiresharkFType(self):
         return self.ftype
@@ -776,7 +723,7 @@ class Type:
 
 class struct(PTVC, Type):
     def __init__(self, name, items, descr=None):
-        name = "struct_%s" % (name,)
+        name = f"struct_{name}"
         NamedList.__init__(self, name, [])
 
         self.bytes = 0
@@ -797,7 +744,7 @@ class struct(PTVC, Type):
                 repeat = item[REC_REPEAT]
                 req_cond = item[REC_REQ_COND]
             else:
-                assert 0, "Item %s item not handled." % (item,)
+                assert 0, f"Item {item} item not handled."
 
             ptvc_rec = PTVCRecord(field, length, endianness, var,
                     repeat, req_cond)
@@ -807,10 +754,7 @@ class struct(PTVC, Type):
         self.hfname = self.name
 
     def Variables(self):
-        vars = []
-        for ptvc_rec in self.list:
-            vars.append(ptvc_rec.Field())
-        return vars
+        return [ptvc_rec.Field() for ptvc_rec in self.list]
 
     def ReferenceString(self, var, repeat, req_cond):
         return "{ PTVC_STRUCT, NO_LENGTH, &%s, NO_ENDIANNESS, %s, %s, %s, NCP_FMT_NONE }" % \
@@ -827,10 +771,7 @@ class struct(PTVC, Type):
 
         x = x + "static const sub_ptvc_record %s = {\n" % (self.name,)
         x = x + "\t&%s,\n" % (ett_name,)
-        if self.descr:
-            x = x + '\t"%s",\n' % (self.descr,)
-        else:
-            x = x + "\tNULL,\n"
+        x = x + '\t"%s",\n' % (self.descr,) if self.descr else x + "\tNULL,\n"
         x = x + "\tptvc_%s,\n" % (self.Name(),)
         x = x + "};\n"
         return x
@@ -966,13 +907,13 @@ class val_string(Type):
 
     def Code(self):
         result = "static const value_string %s[] = {\n" \
-                        % (self.ValuesCName())
+                            % (self.ValuesCName())
         for val_record in self.values:
             value   = val_record[0]
             text    = val_record[1]
             value_repr = self.value_format % value
             result = result + '\t{ %s,\t"%s" },\n' \
-                            % (value_repr, text)
+                                % (value_repr, text)
 
         value_repr = self.value_format % 0
         result = result + "\t{ %s,\tNULL },\n" % (value_repr)
@@ -981,10 +922,10 @@ class val_string(Type):
         return result
 
     def ValuesCName(self):
-        return "ncp_%s_vals" % (self.abbrev)
+        return f"ncp_{self.abbrev}_vals"
 
     def ValuesName(self):
-        return "VALS(%s)" % (self.ValuesCName())
+        return f"VALS({self.ValuesCName()})"
 
 class val_string8(val_string):
     type            = "val_string8"
@@ -1065,7 +1006,7 @@ class bf_val_str(bf_uint):
         self.values = val_string_array
 
     def ValuesName(self):
-        return "VALS(%s)" % (self.ValuesCName())
+        return f"VALS({self.ValuesCName()})"
 
 class bf_val_str8(bf_val_str, val_string8):
     type    = "bf_val_str8"
@@ -1119,26 +1060,18 @@ class bitfield(Type):
     def __init__(self, vars):
         var_hash = {}
         for var in vars:
-            if isinstance(var, bf_boolean):
-                if not isinstance(var, self.bf_type):
-                    print("%s must be of type %s" % \
-                            (var.Abbreviation(),
-                            self.bf_type))
-                    sys.exit(1)
+            if isinstance(var, bf_boolean) and not isinstance(var, self.bf_type):
+                print(f"{var.Abbreviation()} must be of type {self.bf_type}")
+                sys.exit(1)
             var_hash[var.bitmask] = var
 
-        bitmasks = list(var_hash.keys())
-        bitmasks.sort()
+        bitmasks = sorted(var_hash.keys())
         bitmasks.reverse()
 
-        ordered_vars = []
-        for bitmask in bitmasks:
-            var = var_hash[bitmask]
-            ordered_vars.append(var)
-
+        ordered_vars = [var_hash[bitmask] for bitmask in bitmasks]
         self.vars = ordered_vars
-        self.ptvcname = "ncp_%s_bitfield" % (self.abbrev,)
-        self.hfname = "hf_ncp_%s" % (self.abbrev,)
+        self.ptvcname = f"ncp_{self.abbrev}_bitfield"
+        self.hfname = f"hf_ncp_{self.abbrev}"
         self.sub_ptvc = PTVCBitfield(self.PTVCName(), self.vars)
 
     def SubVariables(self):

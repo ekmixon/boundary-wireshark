@@ -39,7 +39,7 @@ class faq_section:
 		return self.name
 
 	def get_num_name(self):
-		return "%s. %s" % (self.get_num_string(), self.name)
+		return f"{self.get_num_string()}. {self.name}"
 
 	def get_header_level(self):
 		return 3
@@ -73,8 +73,8 @@ class faq_section:
 			print('<p class="faq_q">')
 			print(('<a class="faq_qnum" name=q%s>Q %s:</a>' % (id, id)))
 			if tag is not None:
-				print(('<a name=%s>' % tag))
-			print(('<span>%s</span>' % (question)))
+				print(f'<a name={tag}>')
+			print(f'<span>{question}</span>')
 			if tag is not None:
 				print('</a>')
 			print('</p>')

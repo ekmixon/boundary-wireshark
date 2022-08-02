@@ -903,9 +903,7 @@ class wireshark_gen_C:
     def genOpExceptions(self,opnode):
         for ex in opnode.raises():
             if ex.members():
-                #print ex.members()
-                for m in ex.members():
-                    t=0
+                t=0
                     #print m.memberType(), m.memberType().kind()
     #
     # Delegator for Operations
@@ -937,7 +935,7 @@ class wireshark_gen_C:
     #
 
     def addvar(self, var):
-        if not ( var in self.fn_hash[self.curr_sname] ):
+        if var not in self.fn_hash[self.curr_sname]:
             self.fn_hash[self.curr_sname].append(var)
 
     #
@@ -1659,8 +1657,8 @@ class wireshark_gen_C:
         self.st.out(self.template_get_CDR_sequence_length, seqname=pn)
         self.st.out(self.template_get_CDR_sequence_octet, seqname=pn)
         self.addvar(self.c_i_lim + pn + ";")
-        self.addvar("gchar * binary_seq_" + pn + ";")
-        self.addvar("gchar * text_seq_" + pn + ";")
+        self.addvar(f"gchar * binary_seq_{pn};")
+        self.addvar(f"gchar * text_seq_{pn};")
 
 
    #
@@ -1675,9 +1673,8 @@ class wireshark_gen_C:
    #
 
     def namespace(self,node,sep):
-        sname = string.replace(idlutil.ccolonName(node.scopedName()), '::', sep)
         #print "XXX namespace: sname = " + sname
-        return sname
+        return string.replace(idlutil.ccolonName(node.scopedName()), '::', sep)
 
 
     #
@@ -1725,15 +1722,29 @@ class wireshark_gen_C:
 
         if (rt.kind() != idltype.tk_void):
             if (rt.kind() == idltype.tk_alias): # a typdef return val possibly ?
-                self.getCDR_hf(rt, rt.name(),\
-                    opname + "." + op.identifier() + ".return", sname + "_return")
+                self.getCDR_hf(
+                    rt,
+                    rt.name(),
+                    f"{opname}.{op.identifier()}.return",
+                    f"{sname}_return",
+                )
+
             else:
-                self.getCDR_hf(rt, "Return value",\
-                    opname + "." + op.identifier() + ".return", sname + "_return")
+                self.getCDR_hf(
+                    rt,
+                    "Return value",
+                    f"{opname}.{op.identifier()}.return",
+                    f"{sname}_return",
+                )
+
 
         for p in op.parameters():
-            self.getCDR_hf(p.paramType(), p.identifier(),\
-                opname + "." + op.identifier() + "." + p.identifier(), sname + "_" + p.identifier())
+            self.getCDR_hf(
+                p.paramType(),
+                p.identifier(),
+                f"{opname}.{op.identifier()}.{p.identifier()}",
+                f"{sname}_{p.identifier()}",
+            )
 
     def genAt_hf(self,at):
         for decl in at.declarators():
@@ -1741,11 +1752,20 @@ class wireshark_gen_C:
             atname = sname[string.find(sname, "_")+1:]
             atname = atname[:string.find(atname, "_")]
 
-            self.getCDR_hf(at.attrType(), decl.identifier(),\
-                     atname + "." + decl.identifier() + ".get", "get" + "_" + sname + "_" + decl.identifier())
+            self.getCDR_hf(
+                at.attrType(),
+                decl.identifier(),
+                f"{atname}.{decl.identifier()}.get",
+                "get" + "_" + sname + "_" + decl.identifier(),
+            )
+
             if not at.readonly():
-                self.getCDR_hf(at.attrType(), decl.identifier(),\
-                    atname + "." + decl.identifier() + ".set", "set" + "_" + sname + "_" + decl.identifier())
+                self.getCDR_hf(
+                    at.attrType(),
+                    decl.identifier(),
+                    f"{atname}.{decl.identifier()}.set",
+                    "set" + "_" + sname + "_" + decl.identifier(),
+                )
 
     def genSt_hf(self,st):
         sname = self.namespace(st, "_")
@@ -1753,8 +1773,12 @@ class wireshark_gen_C:
         stname = stname[:string.find(stname, "_")]
         for m in st.members():
             for decl in m.declarators():
-                self.getCDR_hf(m.memberType(), st.identifier() + "_" + decl.identifier(),\
-                        st.identifier() + "." + decl.identifier(), sname + "_" + decl.identifier())
+                self.getCDR_hf(
+                    m.memberType(),
+                    f"{st.identifier()}_{decl.identifier()}",
+                    f"{st.identifier()}.{decl.identifier()}",
+                    f"{sname}_{decl.identifier()}",
+                )
 
     def genEx_hf(self,ex):
         sname = self.namespace(ex, "_")
@@ -1762,22 +1786,34 @@ class wireshark_gen_C:
         exname = exname[:string.find(exname, "_")]
         for m in ex.members():
             for decl in m.declarators():
-                self.getCDR_hf(m.memberType(), ex.identifier() + "_" + decl.identifier(),\
-                        exname + "." + ex.identifier() + "_" + decl.identifier(), sname + "_" + decl.identifier())
+                self.getCDR_hf(
+                    m.memberType(),
+                    f"{ex.identifier()}_{decl.identifier()}",
+                    f"{exname}.{ex.identifier()}_{decl.identifier()}",
+                    f"{sname}_{decl.identifier()}",
+                )
 
     def genUnion_hf(self,un):
         sname = self.namespace(un, "_")
         unname = sname[:string.rfind(sname, "_")]
         unname = string.replace(unname, "_", ".")
 
-        self.getCDR_hf(un.switchType().unalias(), un.identifier(),\
-                unname + "." + un.identifier(), sname + "_" + un.identifier())
+        self.getCDR_hf(
+            un.switchType().unalias(),
+            un.identifier(),
+            f"{unname}.{un.identifier()}",
+            f"{sname}_{un.identifier()}",
+        )
 
-        for uc in un.cases():           # for all UnionCase objects in this union
+
+        for uc in un.cases():   # for all UnionCase objects in this union
             for cl in uc.labels():      # for all Caselabel objects in this UnionCase
-                self.getCDR_hf(uc.caseType(), un.identifier() + "_" + uc.declarator().identifier(),\
-                      unname + "." + un.identifier() + "." + uc.declarator().identifier(),\
-                      sname + "_" + uc.declarator().identifier())
+                self.getCDR_hf(
+                    uc.caseType(),
+                    f"{un.identifier()}_{uc.declarator().identifier()}",
+                    f"{unname}.{un.identifier()}.{uc.declarator().identifier()}",
+                    f"{sname}_{uc.declarator().identifier()}",
+                )
 
     #
     # generate  proto_register_<protoname> code,

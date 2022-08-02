@@ -35,10 +35,7 @@ class PacketList:
     items within it."""
 
     def __init__(self, children=None):
-        if children == None:
-            self.children = []
-        else:
-            self.children = children
+        self.children = [] if children is None else children
 
     def __getitem__(self, index):
         """We act like a list."""
@@ -73,7 +70,7 @@ class PacketList:
     def get_items(self, name, items=None):
         """Return all items that match the name 'name'.
         They are returned in order of a depth-first-search."""
-        if items == None:
+        if items is None:
             top_level = 1
             items = []
         else:
@@ -95,7 +92,7 @@ class PacketList:
         before other protocols. For example, if you have an HTTP
         protocol, you can find all tcp.dstport fields *before* that HTTP
         protocol. This helps analyze in the presence of tunneled protocols."""
-        if items == None:
+        if items is None:
             top_level = 1
             items = []
         else:
@@ -243,7 +240,7 @@ class ParseXML(xml.sax.handler.ContentHandler):
             elem = Field(xmlattrs)
 
         else:
-            sys.exit("Unknown element: %s" % (name,))
+            sys.exit(f"Unknown element: {name}")
 
         self.element_stack.append(elem)
 

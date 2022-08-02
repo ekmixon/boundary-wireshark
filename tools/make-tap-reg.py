@@ -70,9 +70,9 @@ for file in files:
 	if os.path.isfile(file):
 		filenames.append(file)
 	else:
-		filenames.append("%s/%s" % (srcdir, file))
+		filenames.append(f"{srcdir}/{file}")
 
-if len(filenames) < 1:
+if not filenames:
 	print("No files found")
 	sys.exit(1)
 
@@ -99,48 +99,42 @@ patterns = [
 cache = None
 if cache_filename:
 	try:
-		cache_file = open(cache_filename, 'rb')
-		cache = pickle.load(cache_file)
-		cache_file.close()
+		with open(cache_filename, 'rb') as cache_file:
+			cache = pickle.load(cache_file)
 	except:
 		cache = {}
 
 # Grep
 for filename in filenames:
-	file = open(filename)
-	cur_mtime = os.fstat(file.fileno())[ST_MTIME]
-	if cache and filename in cache:
-		cdict = cache[filename]
-		if cur_mtime == cdict['mtime']:
+	with open(filename) as file:
+		cur_mtime = os.fstat(file.fileno())[ST_MTIME]
+		if cache and filename in cache:
+			cdict = cache[filename]
+			if cur_mtime == cdict['mtime']:
 #			print "Pulling %s from cache" % (filename)
-			regs['tap_reg'].extend(cdict['tap_reg'])
-			file.close()
-			continue
-	# We don't have a cache entry
-	if cache is not None:
-		cache[filename] = {
-			'mtime': cur_mtime,
-			'tap_reg': [],
-			}
+				regs['tap_reg'].extend(cdict['tap_reg'])
+				file.close()
+				continue
+		# We don't have a cache entry
+		if cache is not None:
+			cache[filename] = {
+				'mtime': cur_mtime,
+				'tap_reg': [],
+				}
 #	print "Searching %s" % (filename)
-	for line in file.readlines():
-		for action in patterns:
-			regex = action[1]
-			match = regex.search(line)
-			if match:
-				symbol = match.group("symbol")
-				sym_type = action[0]
-				regs[sym_type].append(symbol)
-				if cache is not None:
+		for line in file:
+			for action in patterns:
+				regex = action[1]
+				if match := regex.search(line):
+					symbol = match.group("symbol")
+					sym_type = action[0]
+					regs[sym_type].append(symbol)
+					if cache is not None:
 #					print "Caching %s for %s: %s" % (sym_type, filename, symbol)
-					cache[filename][sym_type].append(symbol)
-	file.close()
-
+						cache[filename][sym_type].append(symbol)
 if cache is not None and cache_filename is not None:
-	cache_file = open(cache_filename, 'wb')
-	pickle.dump(cache, cache_file)
-	cache_file.close()
-
+	with open(cache_filename, 'wb') as cache_file:
+		pickle.dump(cache, cache_file)
 # Make sure we actually processed something
 if len(regs['tap_reg']) < 1:
 	print("No protocol registrations found")
@@ -149,26 +143,22 @@ if len(regs['tap_reg']) < 1:
 # Sort the lists to make them pretty
 regs['tap_reg'].sort()
 
-reg_code = open(tmp_filename, "w")
+with open(tmp_filename, "w") as reg_code:
+	reg_code.write("/* Do not modify this file. Changes will be overwritten.  */\n")
+	reg_code.write("/* Generated automatically from %s  */\n" % (sys.argv[0]))
 
-reg_code.write("/* Do not modify this file. Changes will be overwritten.  */\n")
-reg_code.write("/* Generated automatically from %s  */\n" % (sys.argv[0]))
-
-# Make the routine to register all taps
-reg_code.write("""
+	# Make the routine to register all taps
+	reg_code.write("""
 #include "register.h"
 void register_all_tap_listeners(void) {
 """);
 
-for symbol in regs['tap_reg']:
-	line = "  {extern void %s (void); %s ();}\n" % (symbol, symbol)
-	reg_code.write(line)
+	for symbol in regs['tap_reg']:
+		line = "  {extern void %s (void); %s ();}\n" % (symbol, symbol)
+		reg_code.write(line)
 
-reg_code.write("}\n")
+	reg_code.write("}\n")
 
-
-# Close the file
-reg_code.close()
 
 # Remove the old final_file if it exists.
 try:

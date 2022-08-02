@@ -47,7 +47,7 @@ class OutputFile:
             timestamp = float(timestamp.group("time"))
         except ValueError:
             sys.exit("Unable to convert '%s' to floating point." % \
-                    (timestamp,))
+                        (timestamp,))
 
         # Did we wrap around the timeer max?
         if timestamp < self.prev_timestamp:
@@ -64,7 +64,7 @@ class OutputFile:
         subsecs = int(subsecs * 10)
 
         print >> self.fh, "%s.%d" % (time.strftime("%Y-%m-%d %H:%M:%S", gmtime), \
-                subsecs)
+                    subsecs)
 
         # Print the packet data
         offset = 0
@@ -75,7 +75,6 @@ class OutputFile:
             offset += len(hexpairs)
 
         # Blank line
-        print >> self.fh
 
 # Find a timestamp line
 re_timestamp = re.compile(r"^(?P<time>\d+\.\d): [\w/]+\((?P<io>.)\)(:| len=)")

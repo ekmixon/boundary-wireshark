@@ -49,8 +49,7 @@ class BackTrace:
 		frame_will_be = 0
 
 		for line in lines:
-			m = self.re_frame.search(line)
-			if m:
+			if m := self.re_frame.search(line):
 				# Skip the first frame that gdb shows,
 				# which is not part of the backtrace.
 				if not found_non_bt_frame:
@@ -62,17 +61,12 @@ class BackTrace:
 				frame_num = int(m.group("num"))
 				if frame_num != frame_will_be:
 					sys.exit("Found frame %d instead of %d" % \
-						(frame_num, frame_will_be))
+							(frame_num, frame_will_be))
 
-				# Find the function name. XXX - need to handle '???'
-				n = self.re_func1.search(line)
-				if not n:
-					n = self.re_func2.search(line)
-
-				if n:
+				if n := self.re_func1.search(line) or self.re_func2.search(line):
 					func = n.group("func")
 				else:
-					sys.exit("Function name not found in %s" % (line,))
+					sys.exit(f"Function name not found in {line}")
 
 				# Save the info
 				self.frames.append(func)
@@ -249,7 +243,7 @@ def get_value_from_frame(frame_num, variable, fmt=""):
 	if frame_num > 0:
 		cmds.append("up %d" % (frame_num,))
 
-	cmds.append("print %s %s" % (fmt, variable))
+	cmds.append(f"print {fmt} {variable}")
 	lines = apply(run_gdb, cmds)
 
 	LOOKING_FOR_START = 0
@@ -258,17 +252,14 @@ def get_value_from_frame(frame_num, variable, fmt=""):
 	result = ""
 	for line in lines:
 		if line[-1] == "\n":
-			line = line[0:-1]
+			line = line[:-1]
 		if line[-1] == "\r":
-			line = line[0:-1]
+			line = line[:-1]
 
 		if state == LOOKING_FOR_START:
-			if len(line) < 4:
-				continue
-			else:
-				if line[0:4] == "$1 =":
-					result = line[4:]
-					state = READING_VALUE
+			if len(line) >= 4 and line[:4] == "$1 =":
+				result = line[4:]
+				state = READING_VALUE
 
 		elif state == READING_VALUE:
 			result += line
@@ -463,7 +454,7 @@ def main():
 		else:
 			assert 0
 
-	if output_file == None:
+	if output_file is None:
 		usage()
 
 	if len(args) != 2:

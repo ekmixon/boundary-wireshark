@@ -62,11 +62,7 @@ def parse_rows(svc_fd):
     port_reader = csv.reader(svc_fd)
 
     # Header positions as of 2013-08-06
-    if python_version < 0x206:
-        headers = port_reader.next()
-    else:
-        headers = next(port_reader)
-
+    headers = port_reader.next() if python_version < 0x206 else next(port_reader)
     try:
         sn_pos = headers.index('Service Name')
     except:
@@ -88,16 +84,16 @@ def parse_rows(svc_fd):
         service = row[sn_pos]
         port = row[pn_pos]
         proto = row[tp_pos]
-        
+
         if len(service) < 1 or len(port) < 1 or len(proto) < 1:
             continue
-            
+
         for pos in positions:
             del row[pos]
         row = filter(None, row)
         comment = ' '.join(row)
         comment = re.sub('[\n]', '', comment)
-        
+
         if re.search('|'.join(exclude_services), service):
             continue
         if re.search('|'.join(exclude_comments), comment):
@@ -127,11 +123,7 @@ def main(argv):
         if opt in ("-h", "--help"):
             exit_msg(None, 0)
 
-    if (len(argv) > 0):
-        svc_url = argv[0]
-    else:
-        svc_url = iana_svc_url
-
+    svc_url = argv[0] if (len(argv) > 0) else iana_svc_url
     try:
         if python_version < 0x300:
             svc_fd = urllib.urlopen(svc_url)
@@ -139,7 +131,7 @@ def main(argv):
             req = urllib.request.urlopen(svc_url)
             svc_fd = codecs.getreader('utf8')(req)
     except:
-        exit_msg('Error opening ' + svc_url)
+        exit_msg(f'Error opening {svc_url}')
 
     body = parse_rows(svc_fd)
     if len(body) < min_body_size:

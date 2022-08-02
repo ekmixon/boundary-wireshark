@@ -301,10 +301,8 @@ class Dissector(object):
         if not type:
           continue
         if not handle:
-          if not private_handle:
-            handle = self.__wsl.py_create_dissector_handle(self.__protocol)
-          else:
-            handle = private_handle
+          handle = private_handle or self.__wsl.py_create_dissector_handle(
+              self.__protocol)
         ct_type = ct.create_string_buffer(type)
         ct_protocol_id = ct.c_uint(protocol_id)
         self.__wsl.dissector_add_uint(ct_type, ct_protocol_id, handle)
@@ -443,17 +441,17 @@ if False:
     import sys
     # Start tracing when import has finished
     def tracer(frame, event, arg):
-        if event == "line":
-            lineno = frame.f_lineno
-            filename = frame.f_globals["__file__"]
-            if (filename.endswith(".pyc") or
-                filename.endswith(".pyo")):
-                filename = filename[:-1]
-            name = frame.f_globals["__name__"]
-            line = linecache.getline(filename, lineno)
-            print("%s:%s: %s" % (name, lineno, line.rstrip()))
-        if event == "exception":
-            print("exception", arg)
-        return tracer
+      if event == "line":
+        lineno = frame.f_lineno
+        filename = frame.f_globals["__file__"]
+        if (filename.endswith(".pyc") or
+            filename.endswith(".pyo")):
+            filename = filename[:-1]
+        name = frame.f_globals["__name__"]
+        line = linecache.getline(filename, lineno)
+        print(f"{name}:{lineno}: {line.rstrip()}")
+      if event == "exception":
+          print("exception", arg)
+      return tracer
 
     sys.settrace(tracer)

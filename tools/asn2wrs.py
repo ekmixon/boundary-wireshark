@@ -183,7 +183,7 @@ class DuplicateError(Exception):
     def __init__(self, type, ident):
         self.type = type
         self.ident = ident
-        self.msg =  "Duplicate %s for %s" % (self.type, self.ident)
+        self.msg = f"Duplicate {self.type} for {self.ident}"
         Exception.__init__(self, self.msg)
     def __repr__(self):
         return self.msg
@@ -315,7 +315,7 @@ reserved_words = {
 }
 
 for k in list(static_tokens.keys()):
-    if static_tokens [k] == None:
+    if static_tokens[k] is None:
         static_tokens [k] = k
 
 StringTypes = ['Numeric', 'Printable', 'IA5', 'BMP', 'Universal', 'UTF8',
@@ -323,7 +323,7 @@ StringTypes = ['Numeric', 'Printable', 'IA5', 'BMP', 'Universal', 'UTF8',
                'General']
 
 for s in StringTypes:
-    reserved_words[s + 'String'] = s + 'String'
+    reserved_words[f'{s}String'] = f'{s}String'
 
 tokens = list(static_tokens.values()) \
          + list(reserved_words.values()) \
@@ -335,7 +335,7 @@ tokens = list(static_tokens.values()) \
 cur_mod = __import__ (__name__) # XXX blech!
 
 for (k, v) in list(static_tokens.items ()):
-    cur_mod.__dict__['t_' + v] = k
+    cur_mod.__dict__[f't_{v}'] = k
 
 # 11.10 Binary strings
 def t_BSTRING (t):
@@ -446,11 +446,11 @@ class Ctx:
     def outdent (self):
         self.indent_lev -= 1
         assert (self.indent_lev >= 0)
-    def register_assignment (self, ident, val, dependencies):
+    def register_assignment(self, ident, val, dependencies):
         if ident in self.assignments:
             raise DuplicateError("assignment", ident)
         if ident in self.defined_dict:
-            raise Exception("cross-module duplicates for %s" % ident)
+            raise Exception(f"cross-module duplicates for {ident}")
         self.defined_dict [ident] = 1
         self.assignments[ident] = val
         self.dependencies [ident] = dependencies
@@ -459,7 +459,7 @@ class Ctx:
     def register_pyquote (self, val):
         self.pyquotes.append (val)
         return ""
-    def output_assignments (self):
+    def output_assignments(self):
         already_output = {}
         text_list = []
         assign_keys = list(self.assignments.keys())
@@ -475,8 +475,7 @@ class Ctx:
                         (d in assign_keys)):
                         ok = 0
                 if ok:
-                    text_list.append ("%s=%s" % (ident,
-                                                self.assignments [ident]))
+                    text_list.append(f"{ident}={self.assignments[ident]}")
                     already_output [ident] = 1
                     any_output = 1
                     to_output_count -= 1
@@ -489,12 +488,15 @@ class Ctx:
                 for ident in list(self.assignments.keys ()):
                     if ident not in already_output:
                         depend_list = [d for d in self.dependencies[ident] if d in assign_keys]
-                        cycle_list.append ("%s(%s)" % (ident, ",".join (depend_list)))
+                        cycle_list.append(f'{ident}({",".join(depend_list)})')
 
                 text_list.append ("# Cycle XXX " + ",".join (cycle_list))
-                for (ident, val) in list(self.assignments.items ()):
-                    if ident not in already_output:
-                        text_list.append ("%s=%s" % (ident, self.assignments [ident]))
+                text_list.extend(
+                    f"{ident}={self.assignments[ident]}"
+                    for ident, val in list(self.assignments.items())
+                    if ident not in already_output
+                )
+
                 break
 
         return "\n".join (text_list)
@@ -545,14 +547,14 @@ def dependency_compute(items, dependency, map_fn = lambda t: t, ignore_fn = lamb
                 if d in stackx:  # cyclic dependency
                     c = stack[:]
                     c.reverse()
-                    c = [d] + c[0:c.index(d)+1]
+                    c = [d] + c[:c.index(d)+1]
                     c.reverse()
                     item_cyc.append(c)
                     #print 'Cyclic: %s ' % (' -> '.join(c))
                     continue
                 stack.append(d)
                 stackx[d] = dependency.get(d, [])[:]
-                #print 'Push: %s : %s' % (d, str(stackx[d]))
+                            #print 'Push: %s : %s' % (d, str(stackx[d]))
             else:
                 #print 'Pop: %s' % (stack[-1])
                 del stackx[stack[-1]]
@@ -598,8 +600,7 @@ class EthCtx:
         self.all_vals = {}
 
     def encp(self):  # encoding protocol
-        encp = self.encoding
-        return encp
+        return self.encoding
 
     # Encoding
     def Per(self): return self.encoding == 'per'
@@ -616,36 +617,27 @@ class EthCtx:
         return self.group_by_prot or (self.conform.last_group > 0)
 
     def dbg(self, d):
-        if (self.dbgopt.find(d) >= 0):
-            return True
-        else:
-            return False
+        return self.dbgopt.find(d) >= 0
 
     def value_max(self, a, b):
         if (a == 'MAX') or (b == 'MAX'): return 'MAX';
         if a == 'MIN': return b;
         if b == 'MIN': return a;
         try:
-            if (int(a) > int(b)):
-                return a
-            else:
-                return b
+            return a if (int(a) > int(b)) else b
         except (ValueError, TypeError):
             pass
-        return "MAX((%s),(%s))" % (a, b)
+        return f"MAX(({a}),({b}))"
 
     def value_min(self, a, b):
         if (a == 'MIN') or (b == 'MIN'): return 'MIN';
         if a == 'MAX': return b;
         if b == 'MAX': return a;
         try:
-            if (int(a) < int(b)):
-                return a
-            else:
-                return b
+            return a if (int(a) < int(b)) else b
         except (ValueError, TypeError):
             pass
-        return "MIN((%s),(%s))" % (a, b)
+        return f"MIN(({a}),({b}))"
 
     def value_get_eth(self, val):
         if isinstance(val, Value):
@@ -661,7 +653,8 @@ class EthCtx:
             if self.value[nm]['import']:
                 v = self.get_val_from_all(nm, self.value[nm]['import'])
                 if v is None:
-                    msg = 'Need value of imported value identifier %s from %s (%s)' % (nm, self.value[nm]['import'], self.value[nm]['proto'])
+                    msg = f"Need value of imported value identifier {nm} from {self.value[nm]['import']} ({self.value[nm]['proto']})"
+
                     warnings.warn_explicit(msg, UserWarning, '', 0)
                 else:
                     val = v
@@ -670,7 +663,7 @@ class EthCtx:
                 if isinstance (val, Value):
                     val = val.to_str(self)
         else:
-            msg = 'Need value of unknown value identifier %s' % (nm)
+            msg = f'Need value of unknown value identifier {nm}'
             warnings.warn_explicit(msg, UserWarning, '', 0)
         return val
 
@@ -683,7 +676,7 @@ class EthCtx:
             ttype = type
             while (val.type == 'TaggedType'):
                 val = val.val
-                ttype += '/' + UNTAG_TYPE_NAME
+                ttype += f'/{UNTAG_TYPE_NAME}'
             if (val.type != 'Type_Ref'):
                 if (type != ttype):
                     types.append(ttype)
@@ -694,8 +687,8 @@ class EthCtx:
         #print " ", types
         while len(types):
             t = types.pop()
-            if (self.type[t]['import']):
-                attr.update(self.type[t]['attr'])
+            if self.type[t]['import']:
+                attr |= self.type[t]['attr']
                 attr.update(self.eth_get_type_attr_from_all(t, self.type[t]['import']))
             elif (self.type[t]['val'].type == 'SelectionType'):
                 val = self.type[t]['val']
@@ -709,34 +702,38 @@ class EthCtx:
         return attr
 
     def eth_get_type_attr_from_all(self, type, module):
-        attr = {}
-        if module in self.all_type_attr and type in self.all_type_attr[module]:
-            attr = self.all_type_attr[module][type]
-        return attr
+        return (
+            self.all_type_attr[module][type]
+            if module in self.all_type_attr and type in self.all_type_attr[module]
+            else {}
+        )
 
     def get_ttag_from_all(self, type, module):
-        ttag = None
-        if module in self.all_tags and type in self.all_tags[module]:
-            ttag = self.all_tags[module][type]
-        return ttag
+        return (
+            self.all_tags[module][type]
+            if module in self.all_tags and type in self.all_tags[module]
+            else None
+        )
 
     def get_val_from_all(self, nm, module):
-        val = None
-        if module in self.all_vals and nm in self.all_vals[module]:
-            val = self.all_vals[module][nm]
-        return val
+        return (
+            self.all_vals[module][nm]
+            if module in self.all_vals and nm in self.all_vals[module]
+            else None
+        )
 
     def get_obj_repr(self, ident, flds=[], not_flds=[]):
         def set_type_fn(cls, field, fnfield):
-            obj[fnfield + '_fn'] = 'NULL'
-            obj[fnfield + '_pdu'] = 'NULL'
+            obj[f'{fnfield}_fn'] = 'NULL'
+            obj[f'{fnfield}_pdu'] = 'NULL'
             if field in val and isinstance(val[field], Type_Ref):
                 p = val[field].eth_type_default_pars(self, '')
-                obj[fnfield + '_fn'] = p['TYPE_REF_FN']
-                obj[fnfield + '_fn'] = obj[fnfield + '_fn'] % p  # one iteration
-                if (self.conform.check_item('PDU', cls + '.' + field)):
-                    obj[fnfield + '_pdu'] = 'dissect_' + self.field[val[field].val]['ethname']
+                obj[f'{fnfield}_fn'] = p['TYPE_REF_FN']
+                obj[f'{fnfield}_fn'] = obj[f'{fnfield}_fn'] % p
+                if self.conform.check_item('PDU', f'{cls}.{field}'):
+                    obj[f'{fnfield}_pdu'] = 'dissect_' + self.field[val[field].val]['ethname']
             return
+
         # end of get_type_fn()
         obj = { '_name' : ident, '_ident' : asn2c(ident)}
         obj['_class'] = self.oassign[ident].cls
@@ -749,11 +746,8 @@ class EthCtx:
             if f in val:
                 return None
         for f in list(val.keys()):
-            if isinstance(val[f], Node):
-                obj[f] = val[f].fld_obj_repr(self)
-            else:
-                obj[f] = str(val[f])
-        if (obj['_class'] == 'TYPE-IDENTIFIER') or (obj['_class'] == 'ABSTRACT-SYNTAX'):
+            obj[f] = val[f].fld_obj_repr(self) if isinstance(val[f], Node) else str(val[f])
+        if obj['_class'] in ['TYPE-IDENTIFIER', 'ABSTRACT-SYNTAX']:
             set_type_fn(obj['_class'], '&Type', '_type')
         if (obj['_class'] == 'OPERATION'):
             set_type_fn(obj['_class'], '&ArgumentType', '_argument')
@@ -835,11 +829,19 @@ class EthCtx:
                 return  # OK - already imported
             else:
                 raise DuplicateError("type", ident)
-        self.type[ident] = {'import'  : mod, 'proto' : proto,
-                            'ethname' : '' }
-        self.type[ident]['attr'] = { 'TYPE' : 'FT_NONE', 'DISPLAY' : 'BASE_NONE',
-                                     'STRINGS' : 'NULL', 'BITMASK' : '0' }
-        mident = "$%s$%s" % (mod, ident)
+        self.type[ident] = {
+            'import': mod,
+            'proto': proto,
+            'ethname': '',
+            'attr': {
+                'TYPE': 'FT_NONE',
+                'DISPLAY': 'BASE_NONE',
+                'STRINGS': 'NULL',
+                'BITMASK': '0',
+            },
+        }
+
+        mident = f"${mod}${ident}"
         if (self.conform.check_item('TYPE_ATTR', mident)):
             self.type[ident]['attr'].update(self.conform.use_item('TYPE_ATTR', mident))
         else:
@@ -852,14 +854,22 @@ class EthCtx:
     def dummy_import_type(self, ident):
         # dummy imported
         if ident in self.type:
-            raise Exception("Try to dummy import for existing type :%s" % ident)
+            raise Exception(f"Try to dummy import for existing type :{ident}")
         ethtype = asn2c(ident)
-        self.type[ident] = {'import'  : 'xxx', 'proto' : 'xxx',
-                            'ethname' : ethtype }
-        self.type[ident]['attr'] = { 'TYPE' : 'FT_NONE', 'DISPLAY' : 'BASE_NONE',
-                                     'STRINGS' : 'NULL', 'BITMASK' : '0' }
+        self.type[ident] = {
+            'import': 'xxx',
+            'proto': 'xxx',
+            'ethname': ethtype,
+            'attr': {
+                'TYPE': 'FT_NONE',
+                'DISPLAY': 'BASE_NONE',
+                'STRINGS': 'NULL',
+                'BITMASK': '0',
+            },
+        }
+
         self.eth_type[ethtype] = { 'import' : 'xxx', 'proto' : 'xxx' , 'attr' : {}, 'ref' : []}
-        print("Dummy imported: %s (%s)" % (ident, ethtype))
+        print(f"Dummy imported: {ident} ({ethtype})")
         return ethtype
 
     #--- eth_import_class --------------------------------------------------------
@@ -894,7 +904,7 @@ class EthCtx:
 
     #--- eth_sel_req ------------------------------------------------------------
     def eth_sel_req(self, typ, sel):
-        key = typ + '.' + sel
+        key = f'{typ}.{sel}'
         if key not in self.sel_req:
             self.sel_req[key] = { 'typ' : typ , 'sel' : sel}
             self.sel_req_ord.append(key)
@@ -914,12 +924,14 @@ class EthCtx:
     def eth_reg_type(self, ident, val):
         #print "eth_reg_type(ident='%s', type='%s')" % (ident, val.type)
         if ident in self.type:
-            if self.type[ident]['import'] and (self.type[ident]['import'] == self.Module()) :
-                # replace imported type
-                del self.type[ident]
-                self.type_imp.remove(ident)
-            else:
+            if (
+                not self.type[ident]['import']
+                or self.type[ident]['import'] != self.Module()
+            ):
                 raise DuplicateError("type", ident)
+            # replace imported type
+            del self.type[ident]
+            self.type_imp.remove(ident)
         val.ident = ident
         self.type[ident] = { 'val' : val, 'import' : None }
         self.type[ident]['module'] = self.Module()
@@ -935,7 +947,7 @@ class EthCtx:
         self.type[ident]['no_emit'] = self.conform.use_item('NO_EMIT', ident)
         self.type[ident]['tname'] = self.conform.use_item('TYPE_RENAME', ident, val_dflt=self.type[ident]['tname'])
         self.type[ident]['ethname'] = ''
-        if (val.type == 'Type_Ref') or (val.type == 'TaggedType') or (val.type == 'SelectionType') :
+        if val.type in ['Type_Ref', 'TaggedType', 'SelectionType']:
             self.type[ident]['attr'] = {}
         else:
             (ftype, display) = val.eth_ftype(self)
@@ -951,15 +963,15 @@ class EthCtx:
     def eth_reg_objectclass(self, ident, val):
         #print "eth_reg_objectclass(ident='%s')" % (ident)
         if ident in self.objectclass:
-            if self.objectclass[ident]['import'] and (self.objectclass[ident]['import'] == self.Module()) :
+            if self.objectclass[ident]['import'] and (self.objectclass[ident]['import'] == self.Module()):
                 # replace imported object class
                 del self.objectclass[ident]
                 self.objectclass_imp.remove(ident)
-            elif isinstance(self.objectclass[ident]['val'], Class_Ref) and \
-                 isinstance(val, Class_Ref) and \
-                 (self.objectclass[ident]['val'].val == val.val):
-                pass  # ignore duplicated CLASS1 ::= CLASS2
-            else:
+            elif (
+                not isinstance(self.objectclass[ident]['val'], Class_Ref)
+                or not isinstance(val, Class_Ref)
+                or self.objectclass[ident]['val'].val != val.val
+            ):
                 raise DuplicateError("object class", ident)
         self.objectclass[ident] = { 'import' : None, 'module' : self.Module(), 'proto' : self.proto }
         self.objectclass[ident]['val'] = val
@@ -990,11 +1002,8 @@ class EthCtx:
     #--- eth_reg_field ----------------------------------------------------------
     def eth_reg_field(self, ident, type, idx='', parent=None, impl=False, pdu=None):
         #print "eth_reg_field(ident='%s', type='%s')" % (ident, type)
-        if ident in self.field:
-            if pdu and (type == self.field[ident]['type']):
-                pass  # OK already created PDU
-            else:
-                raise DuplicateError("field", ident)
+        if ident in self.field and (not pdu or type != self.field[ident]['type']):
+            raise DuplicateError("field", ident)
         self.field[ident] = {'type' : type, 'idx' : idx, 'impl' : impl, 'pdu' : pdu,
                              'modified' : '', 'attr' : {} }
         name = ident.split('/')[-1]
@@ -1012,10 +1021,13 @@ class EthCtx:
             self.field[ident]['attr']['NAME'] = '"%s"' % name
             self.field[ident]['attr']['ABBREV'] = asn2c(name)
         if self.conform.check_item('FIELD_ATTR', ident):
-            self.field[ident]['modified'] = '#' + str(id(self))
+            self.field[ident]['modified'] = f'#{id(self)}'
             self.field[ident]['attr'].update(self.conform.use_item('FIELD_ATTR', ident))
-        if (pdu):
-            self.field[ident]['pdu']['export'] = (self.conform.use_item('EXPORTS', ident + '_PDU') != 0)
+        if pdu:
+            self.field[ident]['pdu']['export'] = (
+                self.conform.use_item('EXPORTS', f'{ident}_PDU') != 0
+            )
+
             self.pdu_ord.append(ident)
         else:
             self.field_ord.append(ident)

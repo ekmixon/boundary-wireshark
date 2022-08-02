@@ -36,7 +36,7 @@ def get_plugin_list(dir, regexp):
   for sDir in lDir:
     MatchedObject = re.match(regexp, sDir)
     if (MatchedObject != None):
-      lPlugins.append(MatchedObject.group("plugin"))
+      lPlugins.append(MatchedObject["plugin"])
   return lPlugins
 
 #Import the module "name"
@@ -47,8 +47,7 @@ def plugin_import(name):
   except KeyError:
     pass
 
-  r = __import__(name)
-  return r
+  return __import__(name)
 
 def register_dissectors(wspython_dir,  plugins_pers_dir=None):
   #append dir to be able to import py_lib
@@ -63,26 +62,25 @@ def register_dissectors(wspython_dir,  plugins_pers_dir=None):
 
   registered_protocols = []
   for dissectors_dir in dissectors_dirs:
-      #Check if we have the dissectors directory
-      if not os.path.isdir(dissectors_dir):
-        continue
+    #Check if we have the dissectors directory
+    if not os.path.isdir(dissectors_dir):
+      continue
 
-      #append dir to be able to import python dissectors
-      sys.path.append(dissectors_dir)
+    #append dir to be able to import python dissectors
+    sys.path.append(dissectors_dir)
 
-      #Read all python dissectors
-      dissectors = get_plugin_list(dissectors_dir, "(?P<plugin>.*)\.py$")
+    #Read all python dissectors
+    dissectors = get_plugin_list(dissectors_dir, "(?P<plugin>.*)\.py$")
 
       #For each dissector, register it and put it in the list of registered
       #protocols
-      for dissector in dissectors:
-          try:
-              d = plugin_import(dissector)
-              registered_protocol = d.register_protocol()
-              if registered_protocol:
-                registered_protocols.append(registered_protocol)
-          except Exception as e:
-              print('register dissector %s exception %s' % (dissector, e))
+    for dissector in dissectors:
+      try:
+        d = plugin_import(dissector)
+        if registered_protocol := d.register_protocol():
+          registered_protocols.append(registered_protocol)
+      except Exception as e:
+        print(f'register dissector {dissector} exception {e}')
   return registered_protocols
 
 if False:
@@ -90,18 +88,18 @@ if False:
 
     # Start tracing when import has finished
     def tracer(frame, event, arg):
-        if event == "line":
-            lineno = frame.f_lineno
-            filename = frame.f_globals["__file__"]
-            if (filename.endswith(".pyc") or
-                filename.endswith(".pyo")):
-                filename = filename[:-1]
-            name = frame.f_globals["__name__"]
-            line = linecache.getline(filename, lineno)
-            print("%s:%s: %s" % (name, lineno, line.rstrip()))
-        if event == "exception":
-            print("exception", arg)
-        return tracer
+      if event == "line":
+        lineno = frame.f_lineno
+        filename = frame.f_globals["__file__"]
+        if (filename.endswith(".pyc") or
+            filename.endswith(".pyo")):
+            filename = filename[:-1]
+        name = frame.f_globals["__name__"]
+        line = linecache.getline(filename, lineno)
+        print(f"{name}:{lineno}: {line.rstrip()}")
+      if event == "exception":
+          print("exception", arg)
+      return tracer
 
     sys.settrace(tracer)
 

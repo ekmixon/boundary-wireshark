@@ -46,8 +46,8 @@ def build(bld):
 
     blib_bld = os.path.join(bld.srcnode.abspath(bld.env), 'pidl/blib')
 
-    link_command = 'rm -rf blib && ln -fs blib %s' % blib_bld
-    
+    link_command = f'rm -rf blib && ln -fs blib {blib_bld}'
+
     bld.SET_BUILD_GROUP('final')
     if 'POD2MAN' in bld.env and bld.env['POD2MAN'] != '':
         for src, manpage in pidl_manpages.iteritems():
@@ -57,13 +57,13 @@ def build(bld):
                 install_path=os.path.dirname(bld.EXPAND_VARIABLES('${MANDIR}/'+manpage)),
                 target=os.path.basename(manpage))
 
-    # we want to prefer the git version of the parsers if we can. Only if the
-    # source has changed do we want to re-run yapp
-    need_yapp_build = ('YAPP' in bld.env and (
-        bld.IS_NEWER('idl.yp', 'lib/Parse/Pidl/IDL.pm') or
-        bld.IS_NEWER('expr.yp', 'lib/Parse/Pidl/Expr.pm')))
-
-    if need_yapp_build:
+    if need_yapp_build := (
+        'YAPP' in bld.env
+        and (
+            bld.IS_NEWER('idl.yp', 'lib/Parse/Pidl/IDL.pm')
+            or bld.IS_NEWER('expr.yp', 'lib/Parse/Pidl/Expr.pm')
+        )
+    ):
         t = bld.SAMBA_GENERATOR('pidl_parser',
                                 source='idl.yp expr.yp',
                                 target='lib/Parse/Pidl/IDL.pm lib/Parse/Pidl/Expr.pm Makefile.PL',

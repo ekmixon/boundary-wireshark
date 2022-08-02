@@ -30,8 +30,8 @@ else:
     response = urllib.request.urlopen('http://www.linux-usb.org/usb.ids')
 lines = response.read().splitlines()
 
-vendors  = dict()
-products = dict()
+vendors = {}
+products = {}
 vendors_str="static const value_string usb_vendors_vals[] = {\n"
 products_str="static const value_string usb_products_vals[] = {\n"
 
@@ -39,13 +39,13 @@ products_str="static const value_string usb_products_vals[] = {\n"
 for line in lines:
     line = line.rstrip()
 
-    if line == "# Vendors, devices and interfaces. Please keep sorted.":
-        mode = MODE_VENDOR_PRODUCT
-        continue
-    elif line == "# List of known device classes, subclasses and protocols":
+    if line == "# List of known device classes, subclasses and protocols":
         mode = MODE_IDLE
         continue
 
+    elif line == "# Vendors, devices and interfaces. Please keep sorted.":
+        mode = MODE_VENDOR_PRODUCT
+        continue
     if mode == MODE_VENDOR_PRODUCT:
         if re.match("^[0-9a-f]{4}", line):
             last_vendor=line[:4]
@@ -58,7 +58,7 @@ for line in lines:
 
 # Grab from libgphoto (indirectly through tools/usb-ptp-extract-models.pl)
 u = open('tools/usb-ptp-extract-models.txt','r')
-for line in u.readlines():
+for line in u:
     fields=line.split()
     products[fields[0]]= ' '.join(fields[1:])
 

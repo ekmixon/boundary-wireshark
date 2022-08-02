@@ -67,12 +67,8 @@ class Conversation:
 
     def Summarize(self):
         for packet in self.packets:
-            msg = self.CreateMSNMessage(packet)
-            if msg:
+            if msg := self.CreateMSNMessage(packet):
                 self.messages.append(msg)
-            else:
-                 #XXX
-                 pass
 
 
     def CreateMSNMessage(self, packet):
@@ -127,13 +123,7 @@ class Conversation:
         new_string = text
         i = new_string.find("\\")
 
-        while i > -1:
-            # At the end?
-            if i == len(new_string) - 1:
-                # Just let the default action
-                # copy everything to 'bytes'
-                break
-
+        while i > -1 and i != len(new_string) - 1:
             if new_string[i+1] in string.digits:
                 left = new_string[:i]
                 bytes.fromstring(left)
@@ -169,8 +159,8 @@ class Conversation:
             return
 
         print >> out_fh, """
-<HR><BR><H3 Align=Center> ---- New Conversation @ %s ----</H3><BR>""" \
-            % (self.messages[0].timestamp)
+    <HR><BR><H3 Align=Center> ---- New Conversation @ %s ----</H3><BR>""" \
+                % (self.messages[0].timestamp)
 
         user_color_assignments = {}
 
@@ -196,8 +186,8 @@ class Conversation:
             htmlmsg = self.MsgToHTML(msg.message)
 
             print >> out_fh, """
-<FONT COLOR="%s"><FONT SIZE="2">(%s) </FONT><B>%s:</B></FONT> <FONT COLOR="%s">""" \
-                % (user_color, timestamp, user, user_text_color)
+    <FONT COLOR="%s"><FONT SIZE="2">(%s) </FONT><B>%s:</B></FONT> <FONT COLOR="%s">""" \
+                    % (user_color, timestamp, user, user_text_color)
 
             htmlmsg.tofile(out_fh)
 
@@ -301,7 +291,7 @@ def main():
         usage()
 
     for opt, arg in opts:
-        if opt == "-h" or opt == "--help":
+        if opt in ["-h", "--help"]:
             usage()
 
         elif opt == "-o":
@@ -310,7 +300,7 @@ def main():
             try:
                 out_fh = open(filename, "w")
             except IOError:
-                sys.exit("Could not open %s for writing." % (filename,))
+                sys.exit(f"Could not open {filename} for writing.")
 
         elif opt == "-u":
             default_user = arg
@@ -319,7 +309,7 @@ def main():
             tshark = arg
 
         else:
-            sys.exit("Unhandled command-line option: " + opt)
+            sys.exit(f"Unhandled command-line option: {opt}")
 
     run(args, default_user, tshark)
 

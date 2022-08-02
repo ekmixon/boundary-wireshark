@@ -170,7 +170,7 @@ class WiresharkVisitor:
     #
     
     def visitOperation(self,opnode):
-        if not opnode in self.oplist:
+        if opnode not in self.oplist:
             self.oplist.append(opnode)      # store operation node
 
     #
@@ -181,7 +181,7 @@ class WiresharkVisitor:
     #
     
     def visitAttribute(self,atnode):
-        if not atnode in self.atlist:
+        if atnode not in self.atlist:
             self.atlist.append(atnode)      # store attribute node
 
 
@@ -193,7 +193,7 @@ class WiresharkVisitor:
     #
     
     def visitEnum(self,enode):
-        if not enode in self.enlist:
+        if enode not in self.enlist:
             self.enlist.append(enode)      # store enum node if unique
 
     #
@@ -240,7 +240,7 @@ class WiresharkVisitor:
     #
     
     def visitStruct(self,stnode):
-        if not stnode in self.stlist:        
+        if stnode not in self.stlist:        
             self.stlist.append(stnode)      # store struct node if unique and avoid recursive loops
                                             # if we come across recursive structs
 
@@ -260,12 +260,13 @@ class WiresharkVisitor:
     #
     
     def visitUnion(self,unnode):
-        if not unnode in self.unlist:
+        if unnode not in self.unlist:
             self.unlist.append(unnode)      # store union node if unique
 
-            if unnode.constrType():         # enum defined within switch type
-                if isinstance(unnode.switchType(),idltype.Declared):
-                    self.visitDeclared(unnode.switchType())
+            if unnode.constrType() and isinstance(
+                unnode.switchType(), idltype.Declared
+            ):
+                self.visitDeclared(unnode.switchType())
 
             for c in unnode.cases():
                 ct =  c.caseType()

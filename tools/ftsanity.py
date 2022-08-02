@@ -44,11 +44,11 @@ class Field:
 
 def gather_data(tshark):
     """Calls tshark and gathers data."""
-    cmd = "%s -G fields3" % (tshark,)
+    cmd = f"{tshark} -G fields3"
     (status, output) = commands.getstatusoutput(cmd)
 
     if status != 0:
-        sys.exit("Failed: " + cmd)
+        sys.exit(f"Failed: {cmd}")
 
     lines = output.split("\n")
     protos = [Proto(x) for x in lines if x[0] == "P"]
